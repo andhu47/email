@@ -1,0 +1,74 @@
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from flask import Flask, request, render_template_string
+
+app = Flask(__name__)
+
+def send_email(sender_email, recipient_email, subject, body, html_body=None):
+    try:
+        # SMTP server setup (using Gmail as an example)
+        smtp_server = "smtp.gmail.com"
+        smtp_port = 587
+
+        # Set up the SMTP server
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+
+        # Create the email
+        msg = MIMEMultipart("alternative")
+        msg['From'] = sender_email
+        msg['To'] = recipient_email
+        msg['Subject'] = subject
+        
+        # Attach plain text body
+        msg.attach(MIMEText(body, 'plain'))
+        
+        # Attach HTML body if provided
+        if html_body:
+            msg.attach(MIMEText(html_body, 'html'))
+
+        # Send the email
+        server.sendmail(sender_email, recipient_email, msg.as_string())
+        print("Email sent successfully!")
+
+        # Close the SMTP server connection
+        server.quit()
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
+@app.route('/', methods=['GET', 'POST'])
+def email_form():
+    if request.method == 'POST':
+        sender_email = request.form['sender_email']
+        recipient_email = request.form['recipient_email']
+        subject = request.form['subject']
+        body = request.form['body']
+        html_body = request.form.get('html_body')
+        
+        send_email(sender_email, recipient_email, subject, body, html_body)
+    
+    return render_template_string('''
+        <!doctype html>
+        <html>
+        <body>
+            <h2>Send an Email</h2>
+            <form method="post">
+                <label for="sender_email">Sender Email:</label><br>
+                <input type="email" id="sender_email" name="sender_email" required><br>
+                <label for="recipient_email">Recipient Email:</label><br>
+                <input type="email" id="recipient_email" name="recipient_email" required><br>
+                <label for="subject">Subject:</label><br>
+                <input type="text" id="subject" name="subject" required><br>
+                <label for="body">Body:</label><br>
+                <textarea id="body" name="body" required></textarea><br>
+                <label for="html_body">HTML Body (optional):</label><br>
+                <textarea id="html_body" name="html_body"></textarea><br><br>
+                <input type="submit" value="Send Email">
+            </form>
+        </body>
+        </html>
+    ''')
+
+if __name__ == '__main__':
+    app.run(debug=True)
